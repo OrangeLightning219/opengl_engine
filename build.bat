@@ -36,7 +36,7 @@ pushd build
 :: glslc ../src/shaders/simple.vert -o ../engine/shaders/simple.vert.spv
 :: glslc ../src/shaders/simple.frag -o ../engine/shaders/simple.frag.spv
 
-cl %compiler_args% ../src/*.cpp /link /NODEFAULTLIB:library %linker_args% && echo [32mBuild successfull[0m || echo [31mBuild failed[0m
+cl %compiler_args% ../src/*.cpp ../src/*.c /link /NODEFAULTLIB:library %linker_args% && echo [32mBuild successfull[0m || echo [31mBuild failed[0m
 
 popd
 

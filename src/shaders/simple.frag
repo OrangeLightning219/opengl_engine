@@ -1,8 +1,8 @@
-#version 450
+#version 330 core
 
-layout (location = 0) out vec4 outColor;
+out vec4 fragColor;
 
 void main()
 {
-    outColor = vec4(0.8, 0.0, 0.8, 1.0);
+    fragColor = vec4(0.3, 0.2, 0.5, 1.0);
 }
