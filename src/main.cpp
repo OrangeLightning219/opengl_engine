@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <glad/glad.h>
 #include <glfw3.h>
+#include <math.h>
 #include "utils/utils.h"
+#include "shader.h"
 
 void FramebufferSizeCallback( GLFWwindow *window, int width, int height )
 {
@@ -24,7 +26,9 @@ int main()
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
-    GLFWwindow *window = glfwCreateWindow( 1280, 720, "OpenGL Engine", 0, 0 );
+    int windowWidth = 1280;
+    int windowHeight = 1280;
+    GLFWwindow *window = glfwCreateWindow( windowWidth, windowHeight, "OpenGL Engine", 0, 0 );
     if ( !window )
     {
         printf( "Failed to create GLFW window!\n" );
@@ -40,13 +44,13 @@ int main()
         return -1;
     }
 
-    glViewport( 0, 0, 1280, 720 );
+    glViewport( 0, 0, windowWidth, windowHeight );
     glfwSetFramebufferSizeCallback( window, FramebufferSizeCallback );
 
-    float vertices[] = { 0.5f, 0.5f, 0.0f,    // top right
-                         0.5f, -0.5f, 0.0f,   // bottom right
-                         -0.5f, -0.5f, 0.0f,  // bottom left
-                         -0.5f, 0.5f, 0.0f }; // top left
+    float32 vertices[] = { 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,    // top right
+                           0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,   // bottom right
+                           -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,  // bottom left
+                           -0.5f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f }; // top left
     u32 indices[] = { 0, 1, 3,
                       1, 2, 3 };
 
@@ -64,61 +68,14 @@ int main()
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ebo );
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( indices ), indices, GL_STATIC_DRAW );
 
-    char *vertexShaderSource = "#version 330 core\n"
-                               "layout (location = 0) in vec3 position;\n"
-                               "void main()\n"
-                               "{\n"
-                               "    gl_Position = vec4(position.x, position.y, position.z, 1.0);\n"
-                               "}\0";
-    u32 vertexShader = glCreateShader( GL_VERTEX_SHADER );
-    glShaderSource( vertexShader, 1, &vertexShaderSource, 0 );
-    glCompileShader( vertexShader );
-    int success;
-    char infoLog[ 512 ];
-    glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &success );
+    Shader shader = CreateShader( "../src/shaders/simple.vert", "../src/shaders/simple.frag" );
 
-    if ( !success )
-    {
-        glGetShaderInfoLog( vertexShader, 512, 0, infoLog );
-        printf( "Error during vertex shader compilation:\n%s", infoLog );
-    }
-
-    char *fragmentShaderSource = "#version 330 core\n"
-                                 "out vec4 fragColor;\n"
-                                 "void main()\n"
-                                 "{\n"
-                                 "    fragColor = vec4(0.3, 0.2, 0.5, 1.0);\n"
-                                 "}\0";
-
-    u32 fragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
-    glShaderSource( fragmentShader, 1, &fragmentShaderSource, 0 );
-    glCompileShader( fragmentShader );
-    glGetShaderiv( fragmentShader, GL_COMPILE_STATUS, &success );
-
-    if ( !success )
-    {
-        glGetShaderInfoLog( fragmentShader, 512, 0, infoLog );
-        printf( "Error during fragment shader compilation:\n%s", infoLog );
-    }
-
-    u32 shaderProgram = glCreateProgram();
-    glAttachShader( shaderProgram, vertexShader );
-    glAttachShader( shaderProgram, fragmentShader );
-    glLinkProgram( shaderProgram );
-    glGetProgramiv( shaderProgram, GL_LINK_STATUS, &success );
-
-    if ( !success )
-    {
-        glGetProgramInfoLog( shaderProgram, 512, 0, infoLog );
-        printf( "Error during shader linking:\n%s", infoLog );
-    }
-
-    glDeleteShader( vertexShader );
-    glDeleteShader( fragmentShader );
-
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof( float ), 0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof( float32 ), 0 );
     glEnableVertexAttribArray( 0 );
 
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof( float32 ), ( void * ) ( 3 * sizeof( float32 ) ) );
+    glEnableVertexAttribArray( 1 );
+    //
     // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     while ( !glfwWindowShouldClose( window ) )
     {
@@ -129,7 +86,10 @@ int main()
 
         glfwPollEvents();
 
-        glUseProgram( shaderProgram );
+        UseShader( shader );
+        // float32 currentTime = ( float32 ) glfwGetTime();
+        // float32 green = ( sinf( currentTime ) / 2.0f ) + 0.5f;
+        // ShaderSetVec4( shader, "color", 0.0f, green, 0.0f, 1.0f );
         glBindVertexArray( vao );
         // glDrawArrays( GL_TRIANGLES, 0, 3 );
         glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
