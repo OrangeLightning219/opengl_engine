@@ -34,12 +34,6 @@ char *GetShaderCode( char *path )
     char *shaderCode = ( char * ) malloc( ( shaderFileSize + 1 ) * sizeof( char ) );
     int countRead = ( int ) fread( shaderCode, sizeof( char ), shaderFileSize, shaderFile );
 
-    if ( countRead < shaderFileSize )
-    {
-        shaderFileSize = countRead;
-        realloc( shaderCode, countRead + 1 );
-    }
-
     shaderCode[ countRead ] = '\0';
     fclose( shaderFile );
     return shaderCode;
