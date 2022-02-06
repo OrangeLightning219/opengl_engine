@@ -22,9 +22,11 @@ set compiler_args=^
 -wd4505 ^
 -wd4189 ^
 -wd4146 ^
+-wd4127 ^
 -Fe:opengl_engine ^
 -IE:/Tools/glfw/include/GLFW ^
 -IE:/Tools/glad/include ^
+-IE:\Tools\VulkanSDK\Third-Party\Include\glm ^
 -DSLOW
 
 set linker_args=^

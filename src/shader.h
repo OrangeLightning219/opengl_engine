@@ -9,7 +9,7 @@ struct Shader
     u32 id;
 };
 
-char *GetShaderCode( char *path )
+internal char *GetShaderCode( char *path )
 {
     FILE *shaderFile;
     fopen_s( &shaderFile, path, "rt" );
@@ -39,7 +39,7 @@ char *GetShaderCode( char *path )
     return shaderCode;
 }
 
-Shader CreateShader( char *vertexPath, char *fragmentPath )
+internal Shader CreateShader( char *vertexPath, char *fragmentPath )
 {
     int success;
     char infoLog[ 512 ];
@@ -113,4 +113,9 @@ inline void ShaderSetFloat32( Shader shader, char *name, float32 value )
 inline void ShaderSetVec4( Shader shader, char *name, float32 x, float32 y, float32 z, float32 w )
 {
     glUniform4f( glGetUniformLocation( shader.id, name ), x, y, z, w );
+}
+
+inline void ShaderSetMat4( Shader shader, char *name, float32 *mat4 )
+{
+    glUniformMatrix4fv( glGetUniformLocation( shader.id, name ), 1, GL_FALSE, mat4 );
 }

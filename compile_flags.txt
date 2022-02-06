@@ -8,3 +8,4 @@
 -Wno-unused-parameter
 -IE:/Tools/GLFW/include/GLFW
 -IE:/Tools/glad/include
+-IE:\Tools\VulkanSDK\Third-Party\Include\glm

@@ -2,7 +2,6 @@
 
 out vec4 fragColor;  
 
-in vec3 color;
 in vec2 textureCoords;
 
 uniform sampler2D texture1;
