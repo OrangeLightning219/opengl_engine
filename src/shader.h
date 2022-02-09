@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <glad/glad.h>
+#include <glm.hpp>
 #include "utils/utils.h"
 
 struct Shader
@@ -113,6 +114,16 @@ inline void ShaderSetFloat32( Shader shader, char *name, float32 value )
 inline void ShaderSetVec4( Shader shader, char *name, float32 x, float32 y, float32 z, float32 w )
 {
     glUniform4f( glGetUniformLocation( shader.id, name ), x, y, z, w );
+}
+
+inline void ShaderSetVec3( Shader shader, char *name, float32 x, float32 y, float32 z )
+{
+    glUniform3f( glGetUniformLocation( shader.id, name ), x, y, z );
+}
+
+inline void ShaderSetVec3( Shader shader, char *name, glm::vec3 vec )
+{
+    glUniform3f( glGetUniformLocation( shader.id, name ), vec.x, vec.y, vec.z );
 }
 
 inline void ShaderSetMat4( Shader shader, char *name, float32 *mat4 )

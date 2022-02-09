@@ -46,8 +46,8 @@ internal void UpdateCameraVectors( Camera *camera )
     camera->up = glm::normalize( glm::cross( camera->right, camera->front ) );
 }
 
-internal Camera CreateCamera( glm::vec3 position, glm::vec3 worldUp = glm::vec3( 0.0f, 1.0f, 0.0f ),
-                              float32 yaw = defaultYaw, float32 pitch = defaultPitch )
+internal Camera CreateCamera( glm::vec3 position, float32 yaw = defaultYaw, float32 pitch = defaultPitch,
+                              glm::vec3 worldUp = glm::vec3( 0.0f, 1.0f, 0.0f ) )
 {
     Camera result = {};
     result.position = position;
