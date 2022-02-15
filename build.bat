@@ -24,13 +24,15 @@ set compiler_args=^
 -wd4146 ^
 -wd4127 ^
 -Fe:opengl_engine ^
--IE:/Tools/glfw/include/GLFW ^
--IE:/Tools/glad/include ^
+-IE:\Tools\glfw\include\GLFW ^
+-IE:\Tools\glad\include ^
 -IE:\Tools\VulkanSDK\Third-Party\Include\glm ^
+-IE:\Tools\assimp\include ^
 -DSLOW
 
 set linker_args=^
-E:/Tools/glfw/build/src/Debug/glfw3.lib ^
+E:\Tools\glfw\build\src\Debug\glfw3.lib ^
+E:\Tools\assimp\lib\Release\assimp-vc143-mt.lib ^
 user32.lib gdi32.lib shell32.lib opengl32.lib
 
 pushd build

@@ -2,8 +2,8 @@
 
 struct Material
 {
-    sampler2D diffuse;
-    sampler2D specular;
+    sampler2D texture_diffuse1;
+    sampler2D texture_specular1;
     float shininess;
 };
 
@@ -52,7 +52,7 @@ in vec3 fragmentPosition;
 uniform vec3 viewPosition;
 uniform Material material;
 
-#define POINT_LIGHTS_COUNT 4
+#define POINT_LIGHTS_COUNT 1
 uniform PointLight pointLights[POINT_LIGHTS_COUNT];
 uniform DirectionalLight directionalLight;
 uniform SpotLight spotLight;
@@ -72,8 +72,7 @@ void main()
     {
         result += CalculatePointLight(pointLights[i], norm, fragmentPosition, viewDirection);
     }
-    
-    result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection);
+    /* result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection); */
 
     fragColor = vec4(result, 1.0);
 }
@@ -86,9 +85,9 @@ vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir
     vec3 reflectionDirection = reflect(-lightDirection, normal);
     float specularStrength = pow(max(dot(viewDirection, reflectionDirection), 0.0), material.shininess);
 
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, textureCoords));
-    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(material.diffuse, textureCoords));
-    vec3 specular = specularStrength * light.specular * vec3(texture(material.specular, textureCoords));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, textureCoords));
+    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(material.texture_diffuse1, textureCoords));
+    vec3 specular = specularStrength * light.specular * vec3(texture(material.texture_specular1, textureCoords));
 
     return ambient + diffuse + specular;
 }
@@ -101,9 +100,9 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, v
     vec3 reflectionDirection = reflect(-lightDirection, normal);
     float specularStrength = pow(max(dot(viewDirection, reflectionDirection), 0.0), material.shininess);
 
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, textureCoords));
-    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(material.diffuse, textureCoords));
-    vec3 specular = light.specular * specularStrength * vec3(texture(material.specular, textureCoords));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, textureCoords));
+    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(material.texture_diffuse1, textureCoords));
+    vec3 specular = light.specular * specularStrength * vec3(texture(material.texture_specular1, textureCoords));
 
     float distance = length(light.position - fragmentPosition);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
@@ -122,9 +121,9 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec
     vec3 reflectionDirection = reflect(-lightDirection, normal);
     float specularStrength = pow(max(dot(viewDirection, reflectionDirection), 0.0), material.shininess);
 
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, textureCoords));
-    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(material.diffuse, textureCoords));
-    vec3 specular = light.specular * specularStrength * vec3(texture(material.specular, textureCoords));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, textureCoords));
+    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(material.texture_diffuse1, textureCoords));
+    vec3 specular = light.specular * specularStrength * vec3(texture(material.texture_specular1, textureCoords));
 
     float distance = length(light.position - fragmentPosition);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
