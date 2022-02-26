@@ -63,18 +63,24 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec
 
 void main()
 {
-    vec3 norm = normalize(normal);
-    vec3 viewDirection = normalize(viewPosition - fragmentPosition);
-
-    vec3 result = CalculateDirectionalLight(directionalLight, norm, viewDirection);
-
-    for(int i = 0; i < POINT_LIGHTS_COUNT; ++i)
+    vec4 textureColor = texture(material.texture_diffuse1, textureCoords);
+    if(textureColor.a < 0.1)
     {
-        result += CalculatePointLight(pointLights[i], norm, fragmentPosition, viewDirection);
+        discard;
     }
-    /* result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection); */
+/*     vec3 norm = normalize(normal); */
+/*     vec3 viewDirection = normalize(viewPosition - fragmentPosition); */
 
-    fragColor = vec4(result, 1.0);
+/*     vec3 result = CalculateDirectionalLight(directionalLight, norm, viewDirection); */
+
+/*     for(int i = 0; i < POINT_LIGHTS_COUNT; ++i) */
+/*     { */
+/*         result += CalculatePointLight(pointLights[i], norm, fragmentPosition, viewDirection); */
+/*     } */
+/*     result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection); */
+
+/*     fragColor = vec4(result, 1.0); */
+    fragColor = texture(material.texture_diffuse1, textureCoords);
 }
 
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection)

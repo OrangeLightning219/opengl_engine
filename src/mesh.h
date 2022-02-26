@@ -22,7 +22,7 @@ struct Texture
 {
     u32 id;
     Texture_Type type;
-    char *path;
+    char path[ 128 ];
 };
 
 struct Mesh

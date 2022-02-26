@@ -63,8 +63,10 @@ u32 TextureFromFile( char *path, char *directory, bool gamma = false )
         glBindTexture( GL_TEXTURE_2D, id );
         glTexImage2D( GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data );
         glGenerateMipmap( GL_TEXTURE_2D );
-        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
+        //@NOTE: GL_CLAMP_TO_EDGE for transparent not repeating textures, GL_REPEAT otherwise
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
     }
@@ -92,6 +94,7 @@ int LoadMaterialTextures( Model model, aiMaterial *material, aiTextureType aiTyp
             {
                 textures[ index + i ] = loadedTextures[ j ];
                 skip = true;
+                ++result;
                 break;
             }
         }
@@ -101,7 +104,8 @@ int LoadMaterialTextures( Model model, aiMaterial *material, aiTextureType aiTyp
         Texture texture;
         texture.id = TextureFromFile( ( char * ) path.C_Str(), model.directory );
         texture.type = type;
-        texture.path = ( char * ) path.C_Str();
+        strncpy_s( texture.path, path.C_Str(), path.length );
+        texture.path[ path.length ] = '\0';
         textures[ index + i ] = texture;
         loadedTextures.push_back( texture );
         ++result;
@@ -198,9 +202,18 @@ Model CreateModel( char *path )
 
     Model result = {};
     char *lastSlash = strrchr( path, '/' );
-    int count = ( int ) ( lastSlash - path );
-    strncpy_s( result.directory, path, count );
-    result.directory[ count ] = '\0';
+    if ( lastSlash )
+    {
+        int count = ( int ) ( lastSlash - path );
+        strncpy_s( result.directory, path, count );
+        result.directory[ count ] = '\0';
+    }
+    else
+    {
+        result.directory[ 0 ] = '.';
+        result.directory[ 1 ] = '/';
+        result.directory[ 2 ] = '\0';
+    }
 
     result.meshes = ( Mesh * ) malloc( scene->mNumMeshes * sizeof( Mesh ) );
     result.meshesCount = scene->mNumMeshes;

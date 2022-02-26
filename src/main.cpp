@@ -110,10 +110,9 @@ int main()
 
     camera = CreateCamera( glm::vec3( 0.0f, 3.0f, 6.0f ), defaultYaw, -20.0f );
 
-    stbi_set_flip_vertically_on_load( true );
-
     Shader modelShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/cube.frag" );
     Shader lightShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/light.frag" );
+    Shader singleColorShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/single_color.frag" );
 
     UseShader( modelShader );
     ShaderSetFloat32( modelShader, "material.shininess", 32.0f );
@@ -123,16 +122,16 @@ int main()
     ShaderSetVec3( modelShader, "directionalLight.diffuse", 0.4f, 0.4f, 0.4f );
     ShaderSetVec3( modelShader, "directionalLight.specular", 0.5f, 0.5f, 0.5f );
 
-    // ShaderSetVec3( modelShader, "spotLight.position", camera.position );
-    // ShaderSetVec3( modelShader, "spotLight.direction", camera.front );
-    // ShaderSetVec3( modelShader, "spotLight.ambient", 0.0f, 0.0f, 0.0f );
-    // ShaderSetVec3( modelShader, "spotLight.diffuse", 1.0f, 1.0f, 1.0f );
-    // ShaderSetVec3( modelShader, "spotLight.specular", 1.0f, 1.0f, 1.0f );
-    // ShaderSetFloat32( modelShader, "spotLight.cutOff", glm::cos( glm::radians( 12.5f ) ) );
-    // ShaderSetFloat32( modelShader, "spotLight.outerCutOff", glm::cos( glm::radians( 17.5f ) ) );
-    // ShaderSetFloat32( modelShader, "spotLight.constant", 1.0f );
-    // ShaderSetFloat32( modelShader, "spotLight.linear", 0.09f );
-    // ShaderSetFloat32( modelShader, "spotLight.quadratic", 0.032f );
+    ShaderSetVec3( modelShader, "spotLight.position", camera.position );
+    ShaderSetVec3( modelShader, "spotLight.direction", camera.front );
+    ShaderSetVec3( modelShader, "spotLight.ambient", 0.0f, 0.0f, 0.0f );
+    ShaderSetVec3( modelShader, "spotLight.diffuse", 1.0f, 1.0f, 1.0f );
+    ShaderSetVec3( modelShader, "spotLight.specular", 1.0f, 1.0f, 1.0f );
+    ShaderSetFloat32( modelShader, "spotLight.cutOff", glm::cos( glm::radians( 12.5f ) ) );
+    ShaderSetFloat32( modelShader, "spotLight.outerCutOff", glm::cos( glm::radians( 17.5f ) ) );
+    ShaderSetFloat32( modelShader, "spotLight.constant", 1.0f );
+    ShaderSetFloat32( modelShader, "spotLight.linear", 0.09f );
+    ShaderSetFloat32( modelShader, "spotLight.quadratic", 0.032f );
 
     ShaderSetVec3( modelShader, "pointLights[0].position", 0.0f, 3.5f, 3.0f );
     ShaderSetVec3( modelShader, "pointLights[0].ambient", 0.05f, 0.05f, 0.05f );
@@ -142,10 +141,19 @@ int main()
     ShaderSetFloat32( modelShader, "pointLights[0].linear", 0.02f );
     ShaderSetFloat32( modelShader, "pointLights[0].quadratic", 0.032f );
 
+    stbi_set_flip_vertically_on_load( true );
     Model backpack = CreateModel( "backpack/backpack.obj" );
+    stbi_set_flip_vertically_on_load( false );
+    Model grass = CreateModel( "grass.obj" );
+    Model redWindow = CreateModel( "red_window.obj" );
 
     glEnable( GL_DEPTH_TEST );
+    glEnable( GL_STENCIL_TEST );
+    glEnable( GL_BLEND );
+    glEnable( GL_CULL_FACE );
 
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    // glCullFace( GL_FRONT ); //GL_BACK is default
     // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     while ( !glfwWindowShouldClose( window ) )
     {
@@ -155,7 +163,9 @@ int main()
         ProcessInput( window );
 
         glClearColor( 0.4f, 0.4f, 0.4f, 1.0f );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
+
+        glStencilOp( GL_KEEP, GL_KEEP, GL_REPLACE );
 
         glm::mat4 view = GetViewMatrix( &camera );
 
@@ -171,10 +181,44 @@ int main()
         ShaderSetVec3( modelShader, "spotLight.direction", camera.front );
 
         glm::mat4 model = glm::mat4( 1.0f );
-        model = glm::mat4( 1.0f );
         ShaderSetMat4( modelShader, "model", glm::value_ptr( model ) );
 
+        glStencilFunc( GL_ALWAYS, 1, 0xff );
+        glStencilMask( 0xff );
         DrawModel( backpack, modelShader );
+
+        glStencilFunc( GL_NOTEQUAL, 1, 0xff );
+        glStencilMask( 0x00 );
+        glDisable( GL_DEPTH_TEST );
+        UseShader( singleColorShader );
+        model = glm::scale( model, glm::vec3( 1.05f, 1.05f, 1.05f ) );
+        ShaderSetMat4( singleColorShader, "model", glm::value_ptr( model ) );
+        ShaderSetMat4( singleColorShader, "projection", glm::value_ptr( projection ) );
+        ShaderSetMat4( singleColorShader, "view", glm::value_ptr( view ) );
+
+        glEnable( GL_CULL_FACE );
+
+        DrawModel( backpack, singleColorShader );
+
+        glEnable( GL_DEPTH_TEST );
+        glStencilFunc( GL_ALWAYS, 1, 0xff );
+        glStencilMask( 0xff );
+
+        glDisable( GL_CULL_FACE );
+
+        UseShader( modelShader );
+        glm::mat4 model1 = glm::mat4( 1.0f );
+        model1 = glm::translate( model1, glm::vec3( 2.0f, 0.0f, 0.0f ) );
+        ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        DrawModel( grass, modelShader );
+
+        model1 = glm::translate( model1, glm::vec3( -2.0f, 0.0f, 2.0f ) );
+        ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        DrawModel( redWindow, modelShader );
+
+        model1 = glm::translate( model1, glm::vec3( -1.25f, 1.25f, 0.1f ) );
+        ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        DrawModel( redWindow, modelShader );
 
         glfwSwapBuffers( window );
         glfwPollEvents();
