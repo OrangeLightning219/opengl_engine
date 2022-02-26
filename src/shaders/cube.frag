@@ -43,7 +43,7 @@ struct SpotLight
     float quadratic;
 };
 
-out vec4 fragColor;  
+out vec4 fragmentColor;  
 
 in vec2 textureCoords;
 in vec3 normal;
@@ -79,8 +79,8 @@ void main()
 /*     } */
 /*     result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection); */
 
-/*     fragColor = vec4(result, 1.0); */
-    fragColor = texture(material.texture_diffuse1, textureCoords);
+/*     fragmentColor = vec4(result, 1.0); */
+    fragmentColor = texture(material.texture_diffuse1, textureCoords);
 }
 
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection)

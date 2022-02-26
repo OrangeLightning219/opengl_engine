@@ -22,8 +22,13 @@ global_variable float32 lastMouseY = 0.0f;
 
 global_variable Camera camera;
 
+global_variable int windowWidth = 1280;
+global_variable int windowHeight = 1280;
+
 void FramebufferSizeCallback( GLFWwindow *window, int width, int height )
 {
+    windowWidth = width;
+    windowHeight = height;
     glViewport( 0, 0, width, height );
 }
 
@@ -84,8 +89,6 @@ int main()
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
-    int windowWidth = 1280;
-    int windowHeight = 1280;
     GLFWwindow *window = glfwCreateWindow( windowWidth, windowHeight, "OpenGL Engine", 0, 0 );
     if ( !window )
     {
@@ -147,6 +150,59 @@ int main()
     Model grass = CreateModel( "grass.obj" );
     Model redWindow = CreateModel( "red_window.obj" );
 
+    u32 fbo;
+    glGenFramebuffers( 1, &fbo );
+    glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+
+    u32 framebufferTexture;
+    glGenTextures( 1, &framebufferTexture );
+    glBindTexture( GL_TEXTURE_2D, framebufferTexture );
+
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0 );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
+    glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0 );
+
+    u32 rbo;
+    glGenRenderbuffers( 1, &rbo );
+    glBindRenderbuffer( GL_RENDERBUFFER, rbo );
+    glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight );
+    glBindRenderbuffer( GL_RENDERBUFFER, 0 );
+
+    glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo );
+
+    if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
+    {
+        printf( "Creating frame buffer failed!\n" );
+        return -1;
+    }
+
+    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+
+    float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+                             // positions   // texCoords
+                             -1.0f, 1.0f, 0.0f, 1.0f,
+                             -1.0f, -1.0f, 0.0f, 0.0f,
+                             1.0f, -1.0f, 1.0f, 0.0f,
+
+                             -1.0f, 1.0f, 0.0f, 1.0f,
+                             1.0f, -1.0f, 1.0f, 0.0f,
+                             1.0f, 1.0f, 1.0f, 1.0f
+    };
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays( 1, &quadVAO );
+    glGenBuffers( 1, &quadVBO );
+    glBindVertexArray( quadVAO );
+    glBindBuffer( GL_ARRAY_BUFFER, quadVBO );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( quadVertices ), &quadVertices, GL_STATIC_DRAW );
+    glEnableVertexAttribArray( 0 );
+    glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof( float ), ( void * ) 0 );
+    glEnableVertexAttribArray( 1 );
+    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof( float ), ( void * ) ( 2 * sizeof( float ) ) );
+
+    Shader quadShader = CreateShader( "../src/shaders/render_texture.vert", "../src/shaders/render_texture.frag" );
+
     glEnable( GL_DEPTH_TEST );
     glEnable( GL_STENCIL_TEST );
     glEnable( GL_BLEND );
@@ -154,7 +210,7 @@ int main()
 
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     // glCullFace( GL_FRONT ); //GL_BACK is default
-    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE ); //Wireframe
     while ( !glfwWindowShouldClose( window ) )
     {
         float32 currentFrame = ( float32 ) glfwGetTime();
@@ -162,6 +218,7 @@ int main()
         lastFrame = currentFrame;
         ProcessInput( window );
 
+        // glBindFramebuffer( GL_FRAMEBUFFER, fbo );
         glClearColor( 0.4f, 0.4f, 0.4f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
@@ -190,6 +247,7 @@ int main()
         glStencilFunc( GL_NOTEQUAL, 1, 0xff );
         glStencilMask( 0x00 );
         glDisable( GL_DEPTH_TEST );
+
         UseShader( singleColorShader );
         model = glm::scale( model, glm::vec3( 1.05f, 1.05f, 1.05f ) );
         ShaderSetMat4( singleColorShader, "model", glm::value_ptr( model ) );
@@ -220,9 +278,22 @@ int main()
         ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
         DrawModel( redWindow, modelShader );
 
+        //         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+        //         glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+        //         glClear( GL_COLOR_BUFFER_BIT );
+
+        //         UseShader( quadShader );
+        //         glBindVertexArray( quadVAO );
+        //         glDisable( GL_DEPTH_TEST );
+        //         glBindTexture( GL_TEXTURE_2D, framebufferTexture );
+        //         glDrawArrays( GL_TRIANGLES, 0, 6 );
+        //         glEnable( GL_DEPTH_TEST );
+
         glfwSwapBuffers( window );
         glfwPollEvents();
     }
+
+    glDeleteFramebuffers( 1, &fbo );
 
     glfwTerminate();
     return 0;
