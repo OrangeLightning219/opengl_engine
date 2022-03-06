@@ -25,6 +25,70 @@ global_variable Camera camera;
 global_variable int windowWidth = 1280;
 global_variable int windowHeight = 1280;
 
+GLenum glCheckError( char *file, int line )
+{
+    GLenum errorCode;
+    while ( ( errorCode = glGetError() ) != GL_NO_ERROR )
+    {
+        char *error = 0;
+        switch ( errorCode )
+        {
+            case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
+            case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
+            case GL_INVALID_OPERATION: error = "INVALID_OPERATION"; break;
+            case GL_STACK_OVERFLOW: error = "STACK_OVERFLOW"; break;
+            case GL_STACK_UNDERFLOW: error = "STACK_UNDERFLOW"; break;
+            case GL_OUT_OF_MEMORY: error = "OUT_OF_MEMORY"; break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+        }
+        printf( "%s | %s (line: %d)", error, file, line );
+    }
+    return errorCode;
+}
+#define glCheckError() glCheckError_( __FILE__, __LINE__ )
+
+void APIENTRY glDebugOutput( GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length,
+                             const char *message, const void *userParam )
+{
+    // ignore non-significant error/warning codes
+    if ( id == 131169 || id == 131185 || id == 131218 || id == 131204 ) return;
+
+    char *sourceString = 0;
+    switch ( source )
+    {
+        case GL_DEBUG_SOURCE_API: sourceString = "Source: API"; break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM: sourceString = "Source: Window System"; break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: sourceString = "Source: Shader Compiler"; break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY: sourceString = "Source: Third Party"; break;
+        case GL_DEBUG_SOURCE_APPLICATION: sourceString = "Source: Application"; break;
+        case GL_DEBUG_SOURCE_OTHER: sourceString = "Source: Other"; break;
+    }
+
+    char *typeString = 0;
+    switch ( type )
+    {
+        case GL_DEBUG_TYPE_ERROR: typeString = "Type: Error"; break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: typeString = "Type: Deprecated Behaviour"; break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: typeString = "Type: Undefined Behaviour"; break;
+        case GL_DEBUG_TYPE_PORTABILITY: typeString = "Type: Portability"; break;
+        case GL_DEBUG_TYPE_PERFORMANCE: typeString = "Type: Performance"; break;
+        case GL_DEBUG_TYPE_MARKER: typeString = "Type: Marker"; break;
+        case GL_DEBUG_TYPE_PUSH_GROUP: typeString = "Type: Push Group"; break;
+        case GL_DEBUG_TYPE_POP_GROUP: typeString = "Type: Pop Group"; break;
+        case GL_DEBUG_TYPE_OTHER: typeString = "Type: Other"; break;
+    }
+
+    char *severityString = 0;
+    switch ( severity )
+    {
+        case GL_DEBUG_SEVERITY_HIGH: severityString = "Severity: high"; break;
+        case GL_DEBUG_SEVERITY_MEDIUM: severityString = "Severity: medium"; break;
+        case GL_DEBUG_SEVERITY_LOW: severityString = "Severity: low"; break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: severityString = "Severity: notification"; break;
+    }
+    printf( "Debug message (%d): %s\n%s | %s | %s\n\n", id, message, sourceString, typeString, severityString );
+}
+
 void FramebufferSizeCallback( GLFWwindow *window, int width, int height )
 {
     windowWidth = width;
@@ -58,6 +122,15 @@ void ProcessInput( GLFWwindow *window )
     {
         CameraProcessKeyboard( &camera, RIGHT, deltaTime );
     }
+
+    if ( glfwGetKey( window, GLFW_KEY_LEFT_SHIFT ) == GLFW_PRESS )
+    {
+        camera.movementSpeed = 7.0f;
+    }
+    else
+    {
+        camera.movementSpeed = defaultSpeed;
+    }
 }
 
 void MouseCallback( GLFWwindow *window, float64 mouseX, float64 mouseY )
@@ -81,13 +154,45 @@ void ScrollCallback( GLFWwindow *window, float64 xOffset, float64 yOffset )
     CameraProcessScroll( &camera, ( float32 ) yOffset );
 }
 
+u32 loadCubemap( char *faces[ 6 ] )
+{
+    u32 id;
+    glGenTextures( 1, &id );
+    glBindTexture( GL_TEXTURE_CUBE_MAP, id );
+
+    int width, height, channelCount;
+
+    for ( int i = 0; i < 6; ++i )
+    {
+        u8 *data = stbi_load( faces[ i ], &width, &height, &channelCount, 0 );
+        if ( data )
+        {
+            glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data );
+        }
+        else
+        {
+            printf( "Failed to load cubemap texture: %s\n", faces[ i ] );
+        }
+        stbi_image_free( data );
+    }
+
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+
+    return id;
+}
+
 int main()
 {
     glfwInit();
 
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+    glfwWindowHint( GLFW_OPENGL_DEBUG_CONTEXT, true );
 
     GLFWwindow *window = glfwCreateWindow( windowWidth, windowHeight, "OpenGL Engine", 0, 0 );
     if ( !window )
@@ -108,6 +213,16 @@ int main()
         return -1;
     }
 
+    int flags;
+    glGetIntegerv( GL_CONTEXT_FLAGS, &flags );
+    if ( flags & GL_CONTEXT_FLAG_DEBUG_BIT )
+    {
+        glEnable( GL_DEBUG_OUTPUT );
+        glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
+        glDebugMessageCallback( glDebugOutput, 0 );
+        glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0, GL_TRUE );
+    }
+
     glViewport( 0, 0, windowWidth, windowHeight );
     glfwSetFramebufferSizeCallback( window, FramebufferSizeCallback );
 
@@ -116,6 +231,26 @@ int main()
     Shader modelShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/cube.frag" );
     Shader lightShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/light.frag" );
     Shader singleColorShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/single_color.frag" );
+    Shader quadShader = CreateShader( "../src/shaders/render_texture.vert", "../src/shaders/render_texture.frag" );
+    Shader skyboxShader = CreateShader( "../src/shaders/skybox.vert", "../src/shaders/skybox.frag" );
+
+    BindUniformBlock( modelShader, "Matrices", 0 );
+
+    u32 uboMatrices;
+    glGenBuffers( 1, &uboMatrices );
+    glBindBuffer( GL_UNIFORM_BUFFER, uboMatrices );
+    glBufferData( GL_UNIFORM_BUFFER, 2 * sizeof( glm::mat4 ), 0, GL_STATIC_DRAW );
+    glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+
+    glBindBufferRange( GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof( glm::mat4 ) );
+
+    glm::mat4 projection = glm::perspective( glm::radians( 45.0f ), ( float32 ) windowWidth / ( float32 ) windowHeight, 0.1f, 100.0f );
+    glBindBuffer( GL_UNIFORM_BUFFER, uboMatrices );
+    glBufferSubData( GL_UNIFORM_BUFFER, 0, sizeof( glm::mat4 ), glm::value_ptr( projection ) );
+    glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+
+    UseShader( skyboxShader );
+    ShaderSetMat4( skyboxShader, "projection", glm::value_ptr( projection ) );
 
     UseShader( modelShader );
     ShaderSetFloat32( modelShader, "material.shininess", 32.0f );
@@ -190,7 +325,7 @@ int main()
                              1.0f, -1.0f, 1.0f, 0.0f,
                              1.0f, 1.0f, 1.0f, 1.0f
     };
-    unsigned int quadVAO, quadVBO;
+    u32 quadVAO, quadVBO;
     glGenVertexArrays( 1, &quadVAO );
     glGenBuffers( 1, &quadVBO );
     glBindVertexArray( quadVAO );
@@ -201,10 +336,66 @@ int main()
     glEnableVertexAttribArray( 1 );
     glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof( float ), ( void * ) ( 2 * sizeof( float ) ) );
 
-    Shader quadShader = CreateShader( "../src/shaders/render_texture.vert", "../src/shaders/render_texture.frag" );
+    float skyboxVertices[] = {
+        // positions
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        -1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f
+    };
+
+    u32 skyboxVAO, skyboxVBO;
+    glGenVertexArrays( 1, &skyboxVAO );
+    glGenBuffers( 1, &skyboxVBO );
+    glBindVertexArray( skyboxVAO );
+    glBindBuffer( GL_ARRAY_BUFFER, skyboxVBO );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( skyboxVertices ), &skyboxVertices, GL_STATIC_DRAW );
+    glEnableVertexAttribArray( 0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof( float ), ( void * ) 0 );
+
+    char *cubemapFaces[ 6 ] = { "skybox/right.jpg", "skybox/left.jpg", "skybox/top.jpg",
+                                "skybox/bottom.jpg", "skybox/front.jpg", "skybox/back.jpg" };
+    u32 cubemapTexture = loadCubemap( cubemapFaces );
 
     glEnable( GL_DEPTH_TEST );
-    glEnable( GL_STENCIL_TEST );
+    // glEnable( GL_STENCIL_TEST );
     glEnable( GL_BLEND );
     glEnable( GL_CULL_FACE );
 
@@ -222,16 +413,15 @@ int main()
         glClearColor( 0.4f, 0.4f, 0.4f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
-        glStencilOp( GL_KEEP, GL_KEEP, GL_REPLACE );
+        glEnable( GL_CULL_FACE );
+        // glStencilOp( GL_KEEP, GL_KEEP, GL_REPLACE );
 
         glm::mat4 view = GetViewMatrix( &camera );
-
-        glm::mat4 projection = glm::mat4( 1.0f );
-        projection = glm::perspective( glm::radians( camera.zoom ), ( float32 ) windowWidth / ( float32 ) windowHeight, 0.1f, 100.0f );
+        glBindBuffer( GL_UNIFORM_BUFFER, uboMatrices );
+        glBufferSubData( GL_UNIFORM_BUFFER, sizeof( glm::mat4 ), sizeof( glm::mat4 ), glm::value_ptr( view ) );
+        glBindBuffer( GL_UNIFORM_BUFFER, 0 );
 
         UseShader( modelShader );
-        ShaderSetMat4( modelShader, "projection", glm::value_ptr( projection ) );
-        ShaderSetMat4( modelShader, "view", glm::value_ptr( view ) );
         ShaderSetVec3( modelShader, "viewPosition", camera.position );
 
         ShaderSetVec3( modelShader, "spotLight.position", camera.position );
@@ -240,34 +430,46 @@ int main()
         glm::mat4 model = glm::mat4( 1.0f );
         ShaderSetMat4( modelShader, "model", glm::value_ptr( model ) );
 
-        glStencilFunc( GL_ALWAYS, 1, 0xff );
-        glStencilMask( 0xff );
+        // glStencilFunc( GL_ALWAYS, 1, 0xff );
+        // glStencilMask( 0xff );
+        glActiveTexture( GL_TEXTURE5 );
+        ShaderSetInt( modelShader, "skybox", 5 );
+        glBindTexture( GL_TEXTURE_CUBE_MAP, cubemapTexture );
         DrawModel( backpack, modelShader );
 
-        glStencilFunc( GL_NOTEQUAL, 1, 0xff );
-        glStencilMask( 0x00 );
-        glDisable( GL_DEPTH_TEST );
+        // glStencilFunc( GL_NOTEQUAL, 1, 0xff );
+        // glStencilMask( 0x00 );
+        // glDisable( GL_DEPTH_TEST );
 
-        UseShader( singleColorShader );
-        model = glm::scale( model, glm::vec3( 1.05f, 1.05f, 1.05f ) );
-        ShaderSetMat4( singleColorShader, "model", glm::value_ptr( model ) );
-        ShaderSetMat4( singleColorShader, "projection", glm::value_ptr( projection ) );
-        ShaderSetMat4( singleColorShader, "view", glm::value_ptr( view ) );
+        // UseShader( singleColorShader );
+        // model = glm::scale( model, glm::vec3( 1.05f, 1.05f, 1.05f ) );
+        // ShaderSetMat4( singleColorShader, "model", glm::value_ptr( model ) );
+        // ShaderSetMat4( singleColorShader, "projection", glm::value_ptr( projection ) );
+        // ShaderSetMat4( singleColorShader, "view", glm::value_ptr( view ) );
 
-        glEnable( GL_CULL_FACE );
+        //         DrawModel( backpack, singleColorShader );
 
-        DrawModel( backpack, singleColorShader );
+        //         glEnable( GL_DEPTH_TEST );
+        //         glStencilFunc( GL_ALWAYS, 1, 0xff );
+        //         glStencilMask( 0xff );
 
-        glEnable( GL_DEPTH_TEST );
-        glStencilFunc( GL_ALWAYS, 1, 0xff );
-        glStencilMask( 0xff );
-
+        glDepthFunc( GL_LEQUAL );
+        glDepthMask( GL_FALSE );
+        UseShader( skyboxShader );
+        glm::mat4 skyboxView = glm::mat4( glm::mat3( GetViewMatrix( &camera ) ) );
+        ShaderSetMat4( skyboxShader, "view", glm::value_ptr( skyboxView ) );
+        glBindVertexArray( skyboxVAO );
+        glBindTexture( GL_TEXTURE_CUBE_MAP, cubemapTexture );
+        glDrawArrays( GL_TRIANGLES, 0, 36 );
+        glDepthMask( GL_TRUE );
+        glDepthFunc( GL_LESS );
         glDisable( GL_CULL_FACE );
 
         UseShader( modelShader );
         glm::mat4 model1 = glm::mat4( 1.0f );
         model1 = glm::translate( model1, glm::vec3( 2.0f, 0.0f, 0.0f ) );
         ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        ShaderSetInt( modelShader, "material.texture_specular1", 0 );
         DrawModel( grass, modelShader );
 
         model1 = glm::translate( model1, glm::vec3( -2.0f, 0.0f, 2.0f ) );

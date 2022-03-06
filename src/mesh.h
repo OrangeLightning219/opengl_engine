@@ -71,6 +71,8 @@ Mesh CreateMesh( Vertex *vertices, int verticesCount, u32 *indices, int indicesC
     glEnableVertexAttribArray( 2 );
 
     glBindVertexArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
 
     return result;
 }

@@ -35,12 +35,16 @@ E:\Tools\glfw\build\src\Debug\glfw3.lib ^
 E:\Tools\assimp\lib\Release\assimp-vc143-mt.lib ^
 user32.lib gdi32.lib shell32.lib opengl32.lib
 
+pushd src\shaders
+for %%i in (./*) do glslangValidator %%i
+popd
+
 pushd build
 
-:: glslc ../src/shaders/simple.vert -o ../engine/shaders/simple.vert.spv
-:: glslc ../src/shaders/simple.frag -o ../engine/shaders/simple.frag.spv
-
-cl %compiler_args% ../src/*.cpp ../src/*.c /link /NODEFAULTLIB:library %linker_args% && echo [32mBuild successfull[0m || echo [31mBuild failed[0m
+cl %compiler_args% ..\src\*.cpp ..\src\*.c /link /NODEFAULTLIB:library %linker_args% && echo [32mBuild successfull[0m || echo [31mBuild failed[0m
 
 popd
 
+
+:concat
+set shaders=%shaders% %1

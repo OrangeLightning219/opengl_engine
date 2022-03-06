@@ -57,6 +57,8 @@ uniform PointLight pointLights[POINT_LIGHTS_COUNT];
 uniform DirectionalLight directionalLight;
 uniform SpotLight spotLight;
 
+uniform samplerCube skybox;
+
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection);
 vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection);
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection);
@@ -68,19 +70,21 @@ void main()
     {
         discard;
     }
-/*     vec3 norm = normalize(normal); */
-/*     vec3 viewDirection = normalize(viewPosition - fragmentPosition); */
+    vec3 norm = normalize(normal);
+    vec3 viewDirection = normalize(viewPosition - fragmentPosition);
 
-/*     vec3 result = CalculateDirectionalLight(directionalLight, norm, viewDirection); */
+    vec3 result = CalculateDirectionalLight(directionalLight, norm, viewDirection);
 
-/*     for(int i = 0; i < POINT_LIGHTS_COUNT; ++i) */
-/*     { */
-/*         result += CalculatePointLight(pointLights[i], norm, fragmentPosition, viewDirection); */
-/*     } */
-/*     result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection); */
+    for(int i = 0; i < POINT_LIGHTS_COUNT; ++i)
+    {
+        result += CalculatePointLight(pointLights[i], norm, fragmentPosition, viewDirection);
+    }
+    result += CalculateSpotLight(spotLight, norm, fragmentPosition, viewDirection);
 
-/*     fragmentColor = vec4(result, 1.0); */
-    fragmentColor = texture(material.texture_diffuse1, textureCoords);
+    vec3 I = normalize(fragmentPosition - viewPosition);
+    vec3 R = reflect(I, normalize(normal));
+    fragmentColor = mix(vec4(result, textureColor.a), vec4(texture(skybox, R).rgb, 1.0), 0.3);
+    /* fragmentColor = texture(material.texture_diffuse1, textureCoords); */
 }
 
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection)

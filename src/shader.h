@@ -96,37 +96,53 @@ inline void UseShader( Shader shader )
     glUseProgram( shader.id );
 }
 
+inline void BindUniformBlock( Shader shader, char *blockName, int bindingPoint )
+{
+    u32 blockIndex = glGetUniformBlockIndex( shader.id, blockName );
+    glUniformBlockBinding( shader.id, blockIndex, bindingPoint );
+}
+
+internal int GetUniformLocation( int shader, char *name )
+{
+    int location = glGetUniformLocation( shader, name );
+    if ( location < 0 )
+    {
+        printf( "Could not find shader location: %s\n", name );
+    }
+    return location;
+}
+
 inline void ShaderSetBool( Shader shader, char *name, bool value )
 {
-    glUniform1i( glGetUniformLocation( shader.id, name ), ( int ) value );
+    glUniform1i( GetUniformLocation( shader.id, name ), ( int ) value );
 }
 
 inline void ShaderSetInt( Shader shader, char *name, int value )
 {
-    glUniform1i( glGetUniformLocation( shader.id, name ), value );
+    glUniform1i( GetUniformLocation( shader.id, name ), value );
 }
 
 inline void ShaderSetFloat32( Shader shader, char *name, float32 value )
 {
-    glUniform1f( glGetUniformLocation( shader.id, name ), value );
+    glUniform1f( GetUniformLocation( shader.id, name ), value );
 }
 
 inline void ShaderSetVec4( Shader shader, char *name, float32 x, float32 y, float32 z, float32 w )
 {
-    glUniform4f( glGetUniformLocation( shader.id, name ), x, y, z, w );
+    glUniform4f( GetUniformLocation( shader.id, name ), x, y, z, w );
 }
 
 inline void ShaderSetVec3( Shader shader, char *name, float32 x, float32 y, float32 z )
 {
-    glUniform3f( glGetUniformLocation( shader.id, name ), x, y, z );
+    glUniform3f( GetUniformLocation( shader.id, name ), x, y, z );
 }
 
 inline void ShaderSetVec3( Shader shader, char *name, glm::vec3 vec )
 {
-    glUniform3f( glGetUniformLocation( shader.id, name ), vec.x, vec.y, vec.z );
+    glUniform3f( GetUniformLocation( shader.id, name ), vec.x, vec.y, vec.z );
 }
 
 inline void ShaderSetMat4( Shader shader, char *name, float32 *mat4 )
 {
-    glUniformMatrix4fv( glGetUniformLocation( shader.id, name ), 1, GL_FALSE, mat4 );
+    glUniformMatrix4fv( GetUniformLocation( shader.id, name ), 1, GL_FALSE, mat4 );
 }
