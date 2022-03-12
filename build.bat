@@ -23,6 +23,7 @@ set compiler_args=^
 -wd4189 ^
 -wd4146 ^
 -wd4127 ^
+-wd4312 ^
 -Fe:opengl_engine ^
 -IE:\Tools\glfw\include\GLFW ^
 -IE:\Tools\glad\include ^

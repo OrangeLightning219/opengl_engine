@@ -40,7 +40,7 @@ internal char *GetShaderCode( char *path )
     return shaderCode;
 }
 
-internal Shader CreateShader( char *vertexPath, char *fragmentPath )
+internal Shader CreateShader( char *vertexPath, char *fragmentPath, char *geometryPath )
 {
     int success;
     char infoLog[ 512 ];
@@ -76,6 +76,26 @@ internal Shader CreateShader( char *vertexPath, char *fragmentPath )
     u32 id = glCreateProgram();
     glAttachShader( id, vertexShader );
     glAttachShader( id, fragmentShader );
+
+    if ( geometryPath )
+    {
+        char *geometryCode = GetShaderCode( geometryPath );
+        defer { free( geometryCode ); };
+
+        u32 geometryShader = glCreateShader( GL_GEOMETRY_SHADER );
+        glShaderSource( geometryShader, 1, &geometryCode, 0 );
+        glCompileShader( geometryShader );
+        glGetShaderiv( geometryShader, GL_COMPILE_STATUS, &success );
+
+        if ( !success )
+        {
+            glGetShaderInfoLog( geometryShader, 512, 0, infoLog );
+            printf( "Error during geometry shader compilation:\n%s", infoLog );
+        }
+
+        glAttachShader( id, geometryShader );
+    }
+
     glLinkProgram( id );
     glGetProgramiv( id, GL_LINK_STATUS, &success );
 
@@ -89,6 +109,11 @@ internal Shader CreateShader( char *vertexPath, char *fragmentPath )
     glDeleteShader( fragmentShader );
 
     return Shader{ id };
+}
+
+internal inline Shader CreateShader( char *vertexPath, char *fragmentPath )
+{
+    return CreateShader( vertexPath, fragmentPath, 0 );
 }
 
 inline void UseShader( Shader shader )

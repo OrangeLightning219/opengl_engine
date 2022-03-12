@@ -11,14 +11,13 @@
 #include "mesh.h"
 #include "stb_image.h"
 
-std::vector< Texture > loadedTextures = {};
-
 struct Model
 {
     Mesh *meshes;
     int meshesCount;
 
     char directory[ 128 ];
+    std::vector< Texture > loadedTextures = {};
 };
 
 void DrawModel( Model model, Shader shader )
@@ -79,7 +78,7 @@ u32 TextureFromFile( char *path, char *directory, bool gamma = false )
     return id;
 }
 
-int LoadMaterialTextures( Model model, aiMaterial *material, aiTextureType aiType, Texture_Type type, Texture *textures, int index )
+int LoadMaterialTextures( Model *model, aiMaterial *material, aiTextureType aiType, Texture_Type type, Texture *textures, int index )
 {
     int result = 0;
     for ( u32 i = 0; i < material->GetTextureCount( aiType ); ++i )
@@ -88,11 +87,11 @@ int LoadMaterialTextures( Model model, aiMaterial *material, aiTextureType aiTyp
         material->GetTexture( aiType, i, &path );
 
         bool skip = false;
-        for ( u32 j = 0; j < loadedTextures.size(); ++j )
+        for ( u32 j = 0; j < model->loadedTextures.size(); ++j )
         {
-            if ( strcmp( loadedTextures[ j ].path, path.C_Str() ) == 0 )
+            if ( strcmp( model->loadedTextures[ j ].path, path.C_Str() ) == 0 )
             {
-                textures[ index + i ] = loadedTextures[ j ];
+                textures[ index + i ] = model->loadedTextures[ j ];
                 skip = true;
                 ++result;
                 break;
@@ -102,18 +101,18 @@ int LoadMaterialTextures( Model model, aiMaterial *material, aiTextureType aiTyp
         if ( skip ) { continue; }
 
         Texture texture;
-        texture.id = TextureFromFile( ( char * ) path.C_Str(), model.directory );
+        texture.id = TextureFromFile( ( char * ) path.C_Str(), model->directory );
         texture.type = type;
         strncpy_s( texture.path, path.C_Str(), path.length );
         texture.path[ path.length ] = '\0';
         textures[ index + i ] = texture;
-        loadedTextures.push_back( texture );
+        model->loadedTextures.push_back( texture );
         ++result;
     }
     return result;
 }
 
-Mesh ProcessMesh( Model model, aiMesh *mesh, const aiScene *scene )
+Mesh ProcessMesh( Model *model, aiMesh *mesh, const aiScene *scene )
 {
     Vertex *vertices = ( Vertex * ) malloc( mesh->mNumVertices * sizeof( Vertex ) );
 
@@ -160,7 +159,7 @@ Mesh ProcessMesh( Model model, aiMesh *mesh, const aiScene *scene )
     return CreateMesh( vertices, mesh->mNumVertices, indices, mesh->mNumFaces * 3, textures, texturesCount );
 }
 
-void ProcessNodes( Model model, const aiScene *scene )
+void ProcessNodes( Model *model, const aiScene *scene )
 {
     std::stack< aiNode * > stack;
     std::vector< aiNode * > visited;
@@ -183,7 +182,7 @@ void ProcessNodes( Model model, const aiScene *scene )
         for ( u32 i = 0; i < node->mNumMeshes; ++i )
         {
             aiMesh *mesh = scene->mMeshes[ node->mMeshes[ i ] ];
-            model.meshes[ meshIndex++ ] = ProcessMesh( model, mesh, scene );
+            model->meshes[ meshIndex++ ] = ProcessMesh( model, mesh, scene );
         }
     }
 }
@@ -218,7 +217,7 @@ Model CreateModel( char *path )
     result.meshes = ( Mesh * ) malloc( scene->mNumMeshes * sizeof( Mesh ) );
     result.meshesCount = scene->mNumMeshes;
 
-    ProcessNodes( result, scene );
+    ProcessNodes( &result, scene );
 
     return result;
 }

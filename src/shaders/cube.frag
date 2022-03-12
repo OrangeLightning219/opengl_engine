@@ -83,7 +83,7 @@ void main()
 
     vec3 I = normalize(fragmentPosition - viewPosition);
     vec3 R = reflect(I, normalize(normal));
-    fragmentColor = mix(vec4(result, textureColor.a), vec4(texture(skybox, R).rgb, 1.0), 0.3);
+    fragmentColor = mix(vec4(result, textureColor.a), vec4(texture(skybox, R).rgb, 1.0), 0.01);
     /* fragmentColor = texture(material.texture_diffuse1, textureCoords); */
 }
 

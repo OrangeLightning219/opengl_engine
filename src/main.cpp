@@ -233,8 +233,10 @@ int main()
     Shader singleColorShader = CreateShader( "../src/shaders/cube.vert", "../src/shaders/single_color.frag" );
     Shader quadShader = CreateShader( "../src/shaders/render_texture.vert", "../src/shaders/render_texture.frag" );
     Shader skyboxShader = CreateShader( "../src/shaders/skybox.vert", "../src/shaders/skybox.frag" );
+    Shader instancedShader = CreateShader( "../src/shaders/instanced.vert", "../src/shaders/cube.frag" );
 
     BindUniformBlock( modelShader, "Matrices", 0 );
+    BindUniformBlock( instancedShader, "Matrices", 0 );
 
     u32 uboMatrices;
     glGenBuffers( 1, &uboMatrices );
@@ -244,7 +246,7 @@ int main()
 
     glBindBufferRange( GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof( glm::mat4 ) );
 
-    glm::mat4 projection = glm::perspective( glm::radians( 45.0f ), ( float32 ) windowWidth / ( float32 ) windowHeight, 0.1f, 100.0f );
+    glm::mat4 projection = glm::perspective( glm::radians( 45.0f ), ( float32 ) windowWidth / ( float32 ) windowHeight, 0.1f, 500.0f );
     glBindBuffer( GL_UNIFORM_BUFFER, uboMatrices );
     glBufferSubData( GL_UNIFORM_BUFFER, 0, sizeof( glm::mat4 ), glm::value_ptr( projection ) );
     glBindBuffer( GL_UNIFORM_BUFFER, 0 );
@@ -252,38 +254,100 @@ int main()
     UseShader( skyboxShader );
     ShaderSetMat4( skyboxShader, "projection", glm::value_ptr( projection ) );
 
-    UseShader( modelShader );
-    ShaderSetFloat32( modelShader, "material.shininess", 32.0f );
+    Shader shaders[] = { modelShader, instancedShader };
 
-    ShaderSetVec3( modelShader, "directionalLight.direction", -0.2f, -1.0f, -0.3f );
-    ShaderSetVec3( modelShader, "directionalLight.ambient", 0.05f, 0.05f, 0.05f );
-    ShaderSetVec3( modelShader, "directionalLight.diffuse", 0.4f, 0.4f, 0.4f );
-    ShaderSetVec3( modelShader, "directionalLight.specular", 0.5f, 0.5f, 0.5f );
+    for ( Shader shader : shaders )
+    {
+        UseShader( shader );
+        ShaderSetFloat32( shader, "material.shininess", 32.0f );
 
-    ShaderSetVec3( modelShader, "spotLight.position", camera.position );
-    ShaderSetVec3( modelShader, "spotLight.direction", camera.front );
-    ShaderSetVec3( modelShader, "spotLight.ambient", 0.0f, 0.0f, 0.0f );
-    ShaderSetVec3( modelShader, "spotLight.diffuse", 1.0f, 1.0f, 1.0f );
-    ShaderSetVec3( modelShader, "spotLight.specular", 1.0f, 1.0f, 1.0f );
-    ShaderSetFloat32( modelShader, "spotLight.cutOff", glm::cos( glm::radians( 12.5f ) ) );
-    ShaderSetFloat32( modelShader, "spotLight.outerCutOff", glm::cos( glm::radians( 17.5f ) ) );
-    ShaderSetFloat32( modelShader, "spotLight.constant", 1.0f );
-    ShaderSetFloat32( modelShader, "spotLight.linear", 0.09f );
-    ShaderSetFloat32( modelShader, "spotLight.quadratic", 0.032f );
+        ShaderSetVec3( shader, "directionalLight.direction", -0.2f, -1.0f, -0.3f );
+        ShaderSetVec3( shader, "directionalLight.ambient", 0.05f, 0.05f, 0.05f );
+        ShaderSetVec3( shader, "directionalLight.diffuse", 0.4f, 0.4f, 0.4f );
+        ShaderSetVec3( shader, "directionalLight.specular", 0.5f, 0.5f, 0.5f );
 
-    ShaderSetVec3( modelShader, "pointLights[0].position", 0.0f, 3.5f, 3.0f );
-    ShaderSetVec3( modelShader, "pointLights[0].ambient", 0.05f, 0.05f, 0.05f );
-    ShaderSetVec3( modelShader, "pointLights[0].diffuse", 0.8f, 0.8f, 0.8f );
-    ShaderSetVec3( modelShader, "pointLights[0].specular", 1.0f, 1.0f, 1.0f );
-    ShaderSetFloat32( modelShader, "pointLights[0].constant", 1.0f );
-    ShaderSetFloat32( modelShader, "pointLights[0].linear", 0.02f );
-    ShaderSetFloat32( modelShader, "pointLights[0].quadratic", 0.032f );
+        ShaderSetVec3( shader, "spotLight.position", camera.position );
+        ShaderSetVec3( shader, "spotLight.direction", camera.front );
+        ShaderSetVec3( shader, "spotLight.ambient", 0.0f, 0.0f, 0.0f );
+        ShaderSetVec3( shader, "spotLight.diffuse", 1.0f, 1.0f, 1.0f );
+        ShaderSetVec3( shader, "spotLight.specular", 1.0f, 1.0f, 1.0f );
+        ShaderSetFloat32( shader, "spotLight.cutOff", glm::cos( glm::radians( 12.5f ) ) );
+        ShaderSetFloat32( shader, "spotLight.outerCutOff", glm::cos( glm::radians( 17.5f ) ) );
+        ShaderSetFloat32( shader, "spotLight.constant", 1.0f );
+        ShaderSetFloat32( shader, "spotLight.linear", 0.09f );
+        ShaderSetFloat32( shader, "spotLight.quadratic", 0.032f );
+
+        ShaderSetVec3( shader, "pointLights[0].position", 0.0f, 3.5f, 3.0f );
+        ShaderSetVec3( shader, "pointLights[0].ambient", 0.05f, 0.05f, 0.05f );
+        ShaderSetVec3( shader, "pointLights[0].diffuse", 0.8f, 0.8f, 0.8f );
+        ShaderSetVec3( shader, "pointLights[0].specular", 1.0f, 1.0f, 1.0f );
+        ShaderSetFloat32( shader, "pointLights[0].constant", 1.0f );
+        ShaderSetFloat32( shader, "pointLights[0].linear", 0.02f );
+        ShaderSetFloat32( shader, "pointLights[0].quadratic", 0.032f );
+    }
 
     stbi_set_flip_vertically_on_load( true );
     Model backpack = CreateModel( "backpack/backpack.obj" );
     stbi_set_flip_vertically_on_load( false );
     Model grass = CreateModel( "grass.obj" );
     Model redWindow = CreateModel( "red_window.obj" );
+
+    Model planet = CreateModel( "planet/planet.obj" );
+    Model asteroid = CreateModel( "rock/rock.obj" );
+
+    const int asteroidCount = 250000;
+    glm::mat4 *asteroidMatrices = ( glm::mat4 * ) malloc( asteroidCount * sizeof( glm::mat4 ) );
+    srand( ( u32 ) glfwGetTime() );
+    float32 radius = 150.0f;
+    float32 offset = 25.0f;
+
+    for ( int i = 0; i < asteroidCount; ++i )
+    {
+        glm::mat4 asteroidModel = glm::mat4( 1.0f );
+        float32 angle = ( ( float32 ) i / ( float32 ) asteroidCount ) * 360.0f;
+        float32 displacement = ( rand() % ( int ) ( 2 * offset * 100 ) ) / 100.0f - offset;
+        float32 x = sin( angle ) * radius + displacement;
+        displacement = ( rand() % ( int ) ( 2 * offset * 100 ) ) / 100.0f - offset;
+        float32 y = displacement * 0.4f;
+        displacement = ( rand() % ( int ) ( 2 * offset * 100 ) ) / 100.0f - offset;
+        float32 z = cos( angle ) * radius + displacement;
+        asteroidModel = glm::translate( asteroidModel, glm::vec3( x, y, z ) );
+
+        float32 scale = ( rand() % 20 ) / 100.0f + 0.05f;
+        asteroidModel = glm::scale( asteroidModel, glm::vec3( scale ) );
+
+        float32 rotation = ( float32 ) ( rand() % 360 );
+        asteroidModel = glm::rotate( asteroidModel, rotation, glm::vec3( 0.4f, 0.6f, 0.8f ) );
+
+        asteroidMatrices[ i ] = asteroidModel;
+    }
+
+    u32 asteroidBuffer;
+    glGenBuffers( 1, &asteroidBuffer );
+    glBindBuffer( GL_ARRAY_BUFFER, asteroidBuffer );
+    glBufferData( GL_ARRAY_BUFFER, asteroidCount * sizeof( glm::mat4 ), asteroidMatrices, GL_STATIC_DRAW );
+
+    for ( int i = 0; i < asteroid.meshesCount; ++i )
+    {
+        u32 vao = asteroid.meshes[ i ].vao;
+        glBindVertexArray( vao );
+        u32 vec4Size = sizeof( glm::vec4 );
+        glEnableVertexAttribArray( 3 );
+        glVertexAttribPointer( 3, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, ( void * ) 0 );
+        glEnableVertexAttribArray( 4 );
+        glVertexAttribPointer( 4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, ( void * ) ( 1 * vec4Size ) );
+        glEnableVertexAttribArray( 5 );
+        glVertexAttribPointer( 5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, ( void * ) ( 2 * vec4Size ) );
+        glEnableVertexAttribArray( 6 );
+        glVertexAttribPointer( 6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, ( void * ) ( 3 * vec4Size ) );
+
+        glVertexAttribDivisor( 3, 1 );
+        glVertexAttribDivisor( 4, 1 );
+        glVertexAttribDivisor( 5, 1 );
+        glVertexAttribDivisor( 6, 1 );
+
+        glBindVertexArray( 0 );
+    }
 
     u32 fbo;
     glGenFramebuffers( 1, &fbo );
@@ -428,6 +492,7 @@ int main()
         ShaderSetVec3( modelShader, "spotLight.direction", camera.front );
 
         glm::mat4 model = glm::mat4( 1.0f );
+        model = glm::scale( model, glm::vec3( 4.0f, 4.0f, 4.0f ) );
         ShaderSetMat4( modelShader, "model", glm::value_ptr( model ) );
 
         // glStencilFunc( GL_ALWAYS, 1, 0xff );
@@ -435,7 +500,25 @@ int main()
         glActiveTexture( GL_TEXTURE5 );
         ShaderSetInt( modelShader, "skybox", 5 );
         glBindTexture( GL_TEXTURE_CUBE_MAP, cubemapTexture );
-        DrawModel( backpack, modelShader );
+        // DrawModel( backpack, modelShader );
+
+        DrawModel( planet, modelShader );
+
+        UseShader( instancedShader );
+        ShaderSetInt( instancedShader, "skybox", 5 );
+        ShaderSetVec3( instancedShader, "viewPosition", camera.position );
+        ShaderSetVec3( instancedShader, "spotLight.position", camera.position );
+        ShaderSetVec3( instancedShader, "spotLight.direction", camera.front );
+
+        glActiveTexture( GL_TEXTURE0 );
+        glBindTexture( GL_TEXTURE_2D, asteroid.loadedTextures[ 0 ].id );
+        ShaderSetInt( instancedShader, "material.texture_diffuse1", 0 );
+        for ( int i = 0; i < asteroid.meshesCount; ++i )
+        {
+            glBindVertexArray( asteroid.meshes[ i ].vao );
+            glDrawElementsInstanced( GL_TRIANGLES, asteroid.meshes[ i ].indicesCount, GL_UNSIGNED_INT, 0, asteroidCount );
+            glBindVertexArray( 0 );
+        }
 
         // glStencilFunc( GL_NOTEQUAL, 1, 0xff );
         // glStencilMask( 0x00 );
@@ -465,20 +548,20 @@ int main()
         glDepthFunc( GL_LESS );
         glDisable( GL_CULL_FACE );
 
-        UseShader( modelShader );
-        glm::mat4 model1 = glm::mat4( 1.0f );
-        model1 = glm::translate( model1, glm::vec3( 2.0f, 0.0f, 0.0f ) );
-        ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
-        ShaderSetInt( modelShader, "material.texture_specular1", 0 );
-        DrawModel( grass, modelShader );
+        //         UseShader( modelShader );
+        //         glm::mat4 model1 = glm::mat4( 1.0f );
+        //         model1 = glm::translate( model1, glm::vec3( 2.0f, 0.0f, 0.0f ) );
+        //         ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        //         ShaderSetInt( modelShader, "material.texture_specular1", 0 );
+        //         DrawModel( grass, modelShader );
 
-        model1 = glm::translate( model1, glm::vec3( -2.0f, 0.0f, 2.0f ) );
-        ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
-        DrawModel( redWindow, modelShader );
+        //         model1 = glm::translate( model1, glm::vec3( -2.0f, 0.0f, 2.0f ) );
+        //         ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        //         DrawModel( redWindow, modelShader );
 
-        model1 = glm::translate( model1, glm::vec3( -1.25f, 1.25f, 0.1f ) );
-        ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
-        DrawModel( redWindow, modelShader );
+        //         model1 = glm::translate( model1, glm::vec3( -1.25f, 1.25f, 0.1f ) );
+        //         ShaderSetMat4( modelShader, "model", glm::value_ptr( model1 ) );
+        //         DrawModel( redWindow, modelShader );
 
         //         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
         //         glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );

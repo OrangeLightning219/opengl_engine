@@ -6,7 +6,7 @@
 
 global_variable float32 defaultYaw = -90.0f;
 global_variable float32 defaultPitch = 0.0f;
-global_variable float32 defaultSpeed = 2.5f;
+global_variable float32 defaultSpeed = 12.5f;
 global_variable float32 defaultZoom = 45.0f;
 global_variable float32 defaultSensitivity = 0.1f;
 
